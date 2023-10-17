@@ -24,6 +24,4 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long> {
     Optional<Produto> findProdutoById(Long id);
 
     Optional<Produto> findProdutoBySku(String sku);
-
-    List<Produto> findAll();
 }

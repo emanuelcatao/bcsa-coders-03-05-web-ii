@@ -1,6 +1,7 @@
 package tech.ada.ecommerce.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -22,6 +23,7 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
     /*@Query(value = "SELECT c FROM Cliente c WHERE c.nomeCompleto LIKE CONCAT('%', :nome, '%')", nativeQuery = true)
     List<Cliente> findClientesByNomeCompletoCustom2(@Param("nome") String nome);*/
 
+    @Modifying
     @Query("UPDATE Cliente c SET c.ativo = :ativo WHERE c.id = :id")
     void ativarUsuario(@Param("ativo") boolean ativo, @Param("id") long id);
 

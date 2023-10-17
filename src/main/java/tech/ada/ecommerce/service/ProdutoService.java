@@ -48,5 +48,27 @@ public class ProdutoService {
         return produtoRepository.save(produto);
     }
 
-    // Se necessário, adicione mais métodos para deletar produtos, atualizar informações específicas, etc.
+    public void deletarProduto(Long id) {
+        Optional<Produto> produto = produtoRepository.findProdutoById(id);
+        if (produto.isPresent()) {
+            produtoRepository.deleteById(id);
+        } else {
+            throw new RuntimeException("Produto não encontrado para deletar");
+        }
+    }
+
+    public Produto atualizarProduto(Long id, Produto produtoAtualizado) {
+        Optional<Produto> produtoExistente = produtoRepository.findProdutoById(id);
+        if (produtoExistente.isPresent()) {
+            Produto produto = produtoExistente.get();
+            produto.setNome(produtoAtualizado.getNome());
+            produto.setDescricao(produtoAtualizado.getDescricao());
+            produto.setSku(produtoAtualizado.getSku());
+            produto.setPreco(produtoAtualizado.getPreco());
+            produto.setQuantidadeEmEstoque(produtoAtualizado.getQuantidadeEmEstoque());
+            return produtoRepository.save(produto);
+        } else {
+            throw new RuntimeException("Produto não encontrado para atualizar");
+        }
+    }
 }

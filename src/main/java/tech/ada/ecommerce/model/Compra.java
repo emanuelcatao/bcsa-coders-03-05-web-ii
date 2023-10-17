@@ -28,7 +28,8 @@ public class Compra {
     //@OneToMany(fetch = FetchType.LAZY) --> ver depois
     @OneToMany
     private List<ItemProduto> produtos;
-
     @Enumerated(value = EnumType.STRING)
     private StatusType statusType;
+    @ManyToOne
+    private FormaPagamento formaPagamento;
 }

@@ -32,4 +32,19 @@ public class ClienteService {
     public Cliente criarCliente(Cliente cliente) {
         return clienteRepository.save(cliente);
     }
+
+    public Cliente atualizarCliente(Long id, Cliente clienteAtualizado) {
+        if(!clienteRepository.existsById(id)) {
+            throw new RuntimeException("Cliente não encontrado");
+        }
+        clienteAtualizado.setId(id);
+        return clienteRepository.save(clienteAtualizado);
+    }
+
+    public void deletarCliente(Long id) {
+        if(!clienteRepository.existsById(id)) {
+            throw new RuntimeException("Cliente não encontrado");
+        }
+        clienteRepository.deleteById(id);
+    }
 }
