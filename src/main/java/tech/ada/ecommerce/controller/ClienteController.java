@@ -1,16 +1,22 @@
 package tech.ada.ecommerce.controller;
 
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
+import tech.ada.ecommerce.dto.ClienteDTO;
+import tech.ada.ecommerce.dto.ClienteEnderecoDTO;
+import tech.ada.ecommerce.exception.CustomExceptionHandler;
 import tech.ada.ecommerce.model.Cliente;
+import tech.ada.ecommerce.response.GenericResponse;
 import tech.ada.ecommerce.service.ClienteService;
 
+import java.util.HashMap;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/clientes")
+@RequestMapping("/api/v1/cliente")
 public class ClienteController {
     private final ClienteService clienteService;
 
@@ -18,65 +24,99 @@ public class ClienteController {
         this.clienteService = clienteService;
     }
 
-    @GetMapping
-    @ResponseStatus(HttpStatus.OK)
-    public List<Cliente> listarTodosOsClientes() {
+    @GetMapping("")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public List<Cliente> getClientes() {
+        return clienteService.buscarTodosOsClientes();
+    }
+
+    @GetMapping("/ativos")
+    public List<Cliente> getClientesAtivos() {
+        return clienteService.buscarClientesAtivos();
+    }
+
+    @PostMapping("")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ResponseEntity<GenericResponse> saveCliente(@RequestBody ClienteDTO cliente) {
         try {
-            return clienteService.buscarTodosOsClientes();
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro ao listar todos os clientes");
+            ClienteDTO savedCliente = clienteService.salvarCliente(cliente);
+            System.out.println("problema");
+            if (savedCliente != null) {
+                GenericResponse response = new GenericResponse();
+                response.setStatus(HttpStatus.CREATED.value());
+                response.setData(savedCliente);
+                response.setMessage("Cliente criado com sucesso!");
+                return new ResponseEntity<>(response, HttpStatus.CREATED);
+            }
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (ConstraintViolationException exception) {
+            System.out.println("problema 2");
+            CustomExceptionHandler ex = new CustomExceptionHandler();
+            return new ResponseEntity<>(ex.processException(exception), HttpStatus.BAD_REQUEST);
+        } catch (Exception exception) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    @GetMapping("/nome/{nome}")
-    @ResponseStatus(HttpStatus.OK)
-    public List<Cliente> buscarClientesPorNome(@PathVariable("nome") String nome) {
+    @PutMapping("")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ResponseEntity<ClienteDTO> atualizarCliente(@RequestBody ClienteDTO cliente) {
         try {
-            return clienteService.buscarPorNomeCompleto(nome);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro ao buscar clientes pelo nome: " + nome);
+            ClienteDTO savedCliente = clienteService.atualizarCliente(cliente);
+            if (savedCliente != null)
+                return new ResponseEntity<>(savedCliente, HttpStatus.OK);
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (Exception exception) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     @GetMapping("/{id}")
-    @ResponseStatus(HttpStatus.OK)
-    public Cliente buscarClientePorId(@PathVariable("id") Long id) {
-        try {
-            return clienteService.buscarPorId(id);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cliente com ID " + id + " não encontrado");
-        }
+    @PreAuthorize("hasAnyRole('ROLE_ADMIN', 'ROLE_USER')")
+    public ResponseEntity<ClienteDTO> getClienteById(@PathVariable("id") Long idCliente) {
+        return new ResponseEntity<>(clienteService.buscarPorId(idCliente), HttpStatus.OK);
     }
 
-    @RequestMapping(method = { RequestMethod.PUT, RequestMethod.POST })
-    @ResponseStatus(HttpStatus.CREATED)
-    public Cliente criarCliente(@RequestBody Cliente cliente) {
-        try {
-            return clienteService.criarCliente(cliente);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Erro ao criar cliente");
-        }
-    }
-
-    @PutMapping("/{id}")
-    @ResponseStatus(HttpStatus.OK)
-    public Cliente atualizarCliente(@PathVariable("id") Long id, @RequestBody Cliente clienteAtualizado) {
-        try {
-            return clienteService.atualizarCliente(id, clienteAtualizado);
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Erro ao atualizar cliente com ID " + id);
-        }
+    @GetMapping("/nome")
+    public ResponseEntity<List<Cliente>> getClienteByNome(@RequestParam("nome") String nome) {
+        return new ResponseEntity<>(clienteService.buscarPorNome(nome), HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public ResponseEntity<Void> deletarCliente(@PathVariable("id") Long id) {
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<Void> deleteCliente(@PathVariable("id") Long id) {
+        clienteService.deletarCliente(id);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<Void> ativarDesativarCliente(@PathVariable("id") Long id, @RequestParam("ativo") boolean ativo) {
+        clienteService.ativarDesativarCliente(ativo, id);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+    @PatchMapping("/senha/{id}")
+    public ResponseEntity<String> alterarSenha(@PathVariable("id") Long id,
+                                               @RequestBody HashMap<String, String> senhas) {
         try {
-            clienteService.deletarCliente(id);
-            return ResponseEntity.noContent().build();
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Erro ao deletar cliente com ID " + id);
+            return clienteService.alterarSenha(id, senhas);
+        } catch (Exception ex) {
+            return new ResponseEntity<>(ex.getMessage(), HttpStatus.BAD_REQUEST);
         }
+    }
+
+    @PutMapping("/endereco")
+    public ResponseEntity<String> adicionarEndereco(@RequestBody ClienteEnderecoDTO clienteEndereco) {
+        clienteService.adicionarEndereco(clienteEndereco);
+        return new ResponseEntity<>("Endereco adicionado com sucesso", HttpStatus.OK);
+    }
+
+    @PatchMapping("/role")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
+    public ResponseEntity<String> adicionarRole(@RequestParam("idCliente") Long idCliente,
+                                                @RequestParam("idRole") Long idRole) {
+        return clienteService.adicionarRole(idCliente, idRole);
     }
 }
 

@@ -1,11 +1,15 @@
 package tech.ada.ecommerce.model;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import org.hibernate.validator.constraints.CreditCardNumber;
+
+import java.util.Date;
 
 @Entity
 @DiscriminatorValue("CARTAO")
@@ -14,8 +18,22 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PagamentoCartaoCredito extends FormaPagamento {
+    @Column(unique = true, nullable = false, length = 16)
+    @CreditCardNumber
     private String numeroCartao;
-    private String titular;
-    private String dataExpiracao;
-    private String codigoSeguranca;
+
+    @Column(nullable = false)
+    private String nomeTitular;
+
+    @Column(nullable = false)
+    private Date validade;
+
+    @Column(nullable = false, length = 3)
+    private String cvv;
+
+    @Column(nullable = false)
+    private int qtdParcelas;
+
+    @Column(nullable = false)
+    private String cpfTitular;
 }
